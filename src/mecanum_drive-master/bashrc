@@ -1,0 +1,1 @@
+export PATH = "$artbot_ws/src/mecanum_drive-master:$PATH"

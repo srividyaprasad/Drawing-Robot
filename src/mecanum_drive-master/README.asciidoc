@@ -1,0 +1,109 @@
+= mecanum_drive -- Mecanum-Drive Controller
+:imagesdir: ./images
+
+This package implements ROS nodes to control and monitor a mecanum-drive robot.
+
+The package
+is intended as a lighter-weight solution than the ROS controller framework, albeit with lower
+performance since it is written in Python. If you need tight, real-time control, you may want
+to look at link:http://wiki.ros.org/ros_controllers[ros_controllers].
+Those controllers are designed to integrate with hardware in the same process, rather than using topics. Instead, this package
+expects to publish the desired motor speeds using standard ROS messages.
+
+== Supplied Nodes
+
+* `mecanum_drive_controller` -- Converts from twist to wheel velocities for motors.
+* `mecanum_drive_odometry` -- Publishes odometry from wheel encoder data.
+
+The nodes in this package are designed with these considerations:
+
+* The node and hardware implementing mecanum drive should deal only in encoder ticks.
+* Conversions to and from physical coordinates should happen within the nodes in this package.
+* This package should integrate cleanly with the navigation stack, perhaps with remappings.
+* Nodes should use standard topic and parameter names used by the navigation stack, but should allow remapping.
+
+
+== ROS API
+
+=== 1. mecanum_drive_controller
+
+Listens for desired linear and angular velocity, and publishes corresponding wheel velocities, in encoder ticks per second, required to achieve those velocities.
+
+==== Published Topics
+
+`~wheels_desired_rate` (std_msgs/Int16MultiArray)::
+Desired [front left, front right, rear left, rear right] wheel rotation rates, in encoder ticks per second.
+
+==== Subscribed Topics
+
+`~cmd_vel` (geometry_msgs/Twist)::
+Desired linear and angular velocity.
+
+==== Parameters
+
+`~ticks_per_meter` (double)::
+Number of encoder ticks per meter of travel.
+
+`~wheel_separation` (double)::
+Distance between the two wheels on the same axis (meters).
+
+`~wheel_separation_length` (double)::
+Distance between the front and rear axis (meters).
+
+`~rate` (int, default: 50)::
+The rate that the output velocity target messages will be published (Hz).
+
+`~timeout_ticks` (int, default: 2)::
+The number of velocity target messages that will be published after the last twist message is received.
+
+=== 2. mecanum_drive_odometry
+
+Listens for wheel movement and rates and publishes the transform between the odom frame and the robot frame.
+
+==== Published Topics
+
+`~odom` -- (nav_msgs/Odometry)::
+The robot odometry -- the current robot pose.
+
+`~tf`::
+The transform between the odometry frame and the robot frame.
+
+==== Subscribed Topics
+
+`~wheel_ticks` (std_msgs/Int16MultiArray)::
+Cumulative encoder ticks of the [front left, front right, rear left, rear right] wheels.
+
+==== Parameters
+
+`~ticks_per_meter` (double)::
+Number of encoder ticks per meter of travel.
+
+`~wheel_separation` (double)::
+Distance between the two wheels (m).
+
+`~wheel_separation_length` (double)::
+Distance between the front and rear axis (meters).
+
+`~rate` (double, default 10.0)::
+The rate at which the `tf` and `odom` topics are published (Hz).
+
+`~timeout` (double, default 0.2)::
+The amount of time to continue publishing desired wheel rates after receiving a twist message (seconds).
+If set to zero, wheel velocities will be sent only when a new twist message is received.
+
+`~base_frame_id` (string, default: "base_link")::
+The name of the base frame of the robot. 
+
+`~odom_frame_id` (string, default: "odom")::
+The name of the odometry reference frame. 
+
+`~encoder_min` (int, default: -32768)::
+
+`~encoder_max` (int, default: 32768)::
+The min and max value the encoder should output. Used to calculate odometry when the values wrap around. 
+
+`~wheel_low_wrap` (int, default: 0.3 * (encoder_max - encoder_min + 1) + encoder_min)::
+
+`~wheel_high_wrap` (int, default: 0.7 * (encoder_max - encoder_min + 1) + encoder_min)::
+If a reading is greater than wheel_high_wrap and the next reading is less than wheel_low_wrap, then the reading has wrapped around in the positive direction, and the odometry will be calculated appropriately. The same concept applies for the negative direction.
+
